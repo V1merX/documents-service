@@ -1,0 +1,73 @@
+services:
+  postgres:
+    image: postgres:18.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DBNAME}
+    ports:
+      - "5444:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${PG_USER} -d ${PG_DBNAME}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: [ "redis-server", "--save", "", "--appendonly", "no", "--maxmemory-policy", "allkeys-lru" ]
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - internal
+
+  migrate:
+    build:
+      context: .
+      target: migrator
+    environment:
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: "host=postgres port=${PG_PORT} user=${PG_USER} password=${PG_PASSWORD} dbname=${PG_DBNAME} sslmode=disable"
+    command: ["/go/bin/goose", "-dir", "/migrations", "up"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+
+  app:
+    build: .
+    restart: unless-stopped
+    stop_grace_period: 15s
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    volumes:
+      - doc_files:/app/data/files
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - internal
+
+networks:
+  internal:
+    driver: bridge
+
+volumes:
+  pg_data:
+  doc_files:
