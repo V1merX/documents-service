@@ -101,7 +101,7 @@ func NewContainer() (*Container, error) {
 	c.docSvc = document.NewService(c.Logger(), c.docRepo, c.docCache, c.listCache)
 
 	c.authHandler = authH.NewHandler(c.Logger(), c.UserService())
-	c.docsHandler = docsH.NewHandler(c.Logger(), c.docSvc)
+	c.docsHandler = docsH.NewHandler(c.Logger(), c.docSvc, c.UserService())
 
 	return &c, err
 }

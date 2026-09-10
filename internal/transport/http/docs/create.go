@@ -7,7 +7,6 @@ import (
 
 	"github.com/V1merX/documents-service/internal/domain"
 	"github.com/V1merX/documents-service/internal/transport/http/convertor"
-	"github.com/V1merX/documents-service/internal/transport/http/middleware"
 	"github.com/V1merX/documents-service/internal/transport/http/request"
 	"github.com/V1merX/documents-service/internal/transport/http/response"
 	"go.uber.org/zap"
@@ -19,12 +18,6 @@ const (
 )
 
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	login, exists := middleware.UserFromContext(r.Context())
-	if !exists {
-		response.Fail(w, domain.ErrEmptyToken, nil)
-		return
-	}
-
 	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize)
 
 	if err := r.ParseMultipartForm(maxMultipartMem); err != nil {
@@ -45,6 +38,12 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 	if meta.Token == "" {
 		response.Fail(w, domain.ErrEmptyToken, nil)
+		return
+	}
+
+	login, err := h.userService.Exists(r.Context(), meta.Token)
+	if err != nil {
+		response.Fail(w, domain.ErrInvalidToken, nil)
 		return
 	}
 

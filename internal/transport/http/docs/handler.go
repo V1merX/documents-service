@@ -15,14 +15,20 @@ type service interface {
 	Delete(ctx context.Context, cmd document.DeleteCommand) (string, error)
 }
 
-type Handler struct {
-	log *zap.Logger
-	svc service
+type userService interface {
+	Exists(ctx context.Context, token string) (domain.Login, error)
 }
 
-func NewHandler(log *zap.Logger, svc service) *Handler {
+type Handler struct {
+	log         *zap.Logger
+	svc         service
+	userService userService
+}
+
+func NewHandler(log *zap.Logger, svc service, userService userService) *Handler {
 	return &Handler{
-		log: log,
-		svc: svc,
+		log:         log,
+		svc:         svc,
+		userService: userService,
 	}
 }
