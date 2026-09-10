@@ -64,6 +64,10 @@ func (d *Document) Grant() []Login {
 }
 
 func (d *Document) HasAccess(login Login) bool {
+	if d.Public() {
+		return true
+	}
+
 	if d.owner == login {
 		return true
 	}

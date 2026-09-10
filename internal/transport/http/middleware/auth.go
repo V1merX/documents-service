@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"net/http"
-	"uuid"
 
 	"github.com/V1merX/documents-service/internal/domain"
 	"github.com/V1merX/documents-service/internal/transport/http/response"
@@ -11,7 +10,7 @@ import (
 )
 
 type TokenChecker interface {
-	Exists(ctx context.Context, token string) (uuid.UUID, error)
+	Exists(ctx context.Context, token string) (domain.Login, error)
 }
 
 type tokenCtxKey struct{}
@@ -25,7 +24,7 @@ func AuthMiddleware(storer TokenChecker, log *zap.Logger) func(next http.Handler
 				return
 			}
 
-			userID, err := storer.Exists(r.Context(), token)
+			login, err := storer.Exists(r.Context(), token)
 			if err != nil {
 				response.Fail(w, err, func() {
 					log.Error("Failed to check token", zap.Error(err))
@@ -33,12 +32,7 @@ func AuthMiddleware(storer TokenChecker, log *zap.Logger) func(next http.Handler
 				return
 			}
 
-			if userID == uuid.Nil() {
-				response.Fail(w, domain.ErrInvalidToken, nil)
-				return
-			}
-
-			ctx := context.WithValue(r.Context(), tokenCtxKey{}, userID)
+			ctx := context.WithValue(r.Context(), tokenCtxKey{}, login)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

@@ -30,18 +30,18 @@ func NewService(adminToken []byte, hasher domain.PasswordHasher, repo repo) *Ser
 	}
 }
 
-func (s *Service) Exists(ctx context.Context, inputToken string) (uuid.UUID, error) {
+func (s *Service) Exists(ctx context.Context, inputToken string) (domain.Login, error) {
 	token, err := domain.ValidateToken(inputToken)
 	if err != nil {
-		return uuid.Nil(), err
+		return domain.Login{}, err
 	}
 
 	user, err := s.repo.GetByToken(ctx, token)
 	if err != nil {
-		return uuid.Nil(), err
+		return domain.Login{}, err
 	}
 
-	return user.ID(), nil
+	return user.Login(), nil
 }
 
 func (s *Service) Register(ctx context.Context, cmd RegisterCommand) (domain.Login, error) {
